@@ -22,6 +22,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	defaultscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/pointer"
 )
 
 var _ = Describe("StatefulSet", func() {
@@ -95,7 +96,6 @@ var _ = Describe("StatefulSet", func() {
 		})
 		Context("PVC template", func() {
 			It("creates the required PersistentVolumeClaim", func() {
-				truth := true
 				q, _ := k8sresource.ParseQuantity("10Gi")
 
 				obj, err := stsBuilder.Build()
@@ -117,8 +117,8 @@ var _ = Describe("StatefulSet", func() {
 								Kind:               "RabbitmqCluster",
 								Name:               instance.Name,
 								UID:                "",
-								Controller:         &truth,
-								BlockOwnerDeletion: &truth,
+								Controller:         pointer.BoolPtr(true),
+								BlockOwnerDeletion: pointer.BoolPtr(false),
 							},
 						},
 						Annotations: map[string]string{},
@@ -170,7 +170,6 @@ var _ = Describe("StatefulSet", func() {
 
 			It("overrides the PVC list", func() {
 				storageClass := "my-storage-class"
-				truth := true
 				builder.Instance.Spec.Override.StatefulSet = &rabbitmqv1beta1.StatefulSet{
 					Spec: &rabbitmqv1beta1.StatefulSetSpec{
 						VolumeClaimTemplates: []rabbitmqv1beta1.PersistentVolumeClaim{
@@ -221,8 +220,8 @@ var _ = Describe("StatefulSet", func() {
 									Kind:               "RabbitmqCluster",
 									Name:               instance.Name,
 									UID:                "",
-									Controller:         &truth,
-									BlockOwnerDeletion: &truth,
+									Controller:         pointer.BoolPtr(true),
+									BlockOwnerDeletion: pointer.BoolPtr(false),
 								},
 							},
 						},
@@ -245,8 +244,8 @@ var _ = Describe("StatefulSet", func() {
 									Kind:               "RabbitmqCluster",
 									Name:               instance.Name,
 									UID:                "",
-									Controller:         &truth,
-									BlockOwnerDeletion: &truth,
+									Controller:         pointer.BoolPtr(true),
+									BlockOwnerDeletion: pointer.BoolPtr(false),
 								},
 							},
 						},
