@@ -537,6 +537,22 @@ func (builder *StatefulSetBuilder) podTemplateSpec(annotations, labels map[strin
 						},
 					},
 				},
+				{
+					Name:  "mnesia-group-changer",
+					Image: "alpine",
+					SecurityContext: &corev1.SecurityContext{
+						RunAsUser: pointer.Int64Ptr(0),
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "persistence",
+							MountPath: "/var/lib/rabbitmq/mnesia/",
+						},
+					},
+					Command: []string{
+						"sh", "-c", "chgrp 999 /var/lib/rabbitmq/mnesia/",
+					},
+				},
 			},
 			Volumes: volumes,
 			Containers: []corev1.Container{

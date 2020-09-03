@@ -936,15 +936,15 @@ var _ = Describe("StatefulSet", func() {
 			Expect(actualProbeCommand).To(Equal([]string{"/bin/sh", "-c", "rabbitmq-diagnostics check_port_connectivity"}))
 		})
 
-		It("templates the correct InitContainer", func() {
+		It("templates the correct InitContainers", func() {
 			stsBuilder := builder.StatefulSet()
 			Expect(stsBuilder.Update(statefulSet)).To(Succeed())
 
 			initContainers := statefulSet.Spec.Template.Spec.InitContainers
-			Expect(len(initContainers)).To(Equal(1))
+			Expect(initContainers).To(HaveLen(2))
 
-			container := extractContainer(initContainers, "copy-config")
-			Expect(container.Command).To(Equal([]string{
+			copyContainer := extractContainer(initContainers, "copy-config")
+			Expect(copyContainer.Command).To(Equal([]string{
 				"sh", "-c", "cp /tmp/rabbitmq/rabbitmq.conf /etc/rabbitmq/rabbitmq.conf && echo '' >> /etc/rabbitmq/rabbitmq.conf ; " +
 					"cp /tmp/rabbitmq/advanced.config /etc/rabbitmq/advanced.config ; " +
 					"cp /tmp/rabbitmq/rabbitmq-env.conf /etc/rabbitmq/rabbitmq-env.conf ; " +
@@ -954,8 +954,7 @@ var _ = Describe("StatefulSet", func() {
 					"cp /tmp/rabbitmq-plugins/enabled_plugins /etc/rabbitmq/enabled_plugins " +
 					"&& chown 999:999 /etc/rabbitmq/enabled_plugins",
 			}))
-
-			Expect(container.VolumeMounts).To(ConsistOf(
+			Expect(copyContainer.VolumeMounts).To(ConsistOf(
 				corev1.VolumeMount{
 					Name:      "server-conf",
 					MountPath: "/tmp/rabbitmq/",
@@ -978,8 +977,18 @@ var _ = Describe("StatefulSet", func() {
 					MountPath: "/tmp/erlang-cookie-secret/",
 				},
 			))
+			Expect(copyContainer.Image).To(Equal("rabbitmq-image-from-cr"))
 
-			Expect(container.Image).To(Equal("rabbitmq-image-from-cr"))
+			groupChangeContainer := extractContainer(initContainers, "mnesia-group-changer")
+			Expect(groupChangeContainer.Command).To(ConsistOf("sh", "-c", "chgrp 999 /var/lib/rabbitmq/mnesia/"))
+			Expect(groupChangeContainer.VolumeMounts).To(ConsistOf(
+				corev1.VolumeMount{
+					Name:      "persistence",
+					MountPath: "/var/lib/rabbitmq/mnesia/",
+				},
+			))
+			Expect(groupChangeContainer.Image).To(Equal("alpine"))
+			Expect(groupChangeContainer.SecurityContext.RunAsUser).To(Equal(pointer.Int64Ptr(0)))
 		})
 
 		It("adds the required terminationGracePeriodSeconds", func() {
